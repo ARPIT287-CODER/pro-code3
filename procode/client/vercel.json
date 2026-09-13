@@ -1,5 +1,7 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://pro-code3.onrender.com/api/:path*" }
+    { "source": "/api/:path*", "destination": "https://pro-code3.onrender.com/api/:path*" },
+    { "source": "/download-pdf", "destination": "https://pro-code3.onrender.com/download-pdf" },
+    { "source": "/docs/:path*", "destination": "https://pro-code3.onrender.com/docs/:path*" }
   ]
 }
