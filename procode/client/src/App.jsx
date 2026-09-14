@@ -4,27 +4,24 @@ import AuthModal from './components/AuthModal';
 import ErrorBoundary from './components/ErrorBoundary';
 import ProblemLadder from './pages/ProblemLadder';
 import ProblemSolver from './pages/ProblemSolver';
-import NotesPage from './pages/NotesPage';
-import PapersPage from './pages/PapersPage';
+import CompilerPage from './pages/CompilerPage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import ProfilePage from './pages/ProfilePage';
 import AdminPage from './pages/AdminPage';
-import { Terminal, Shield, AlertTriangle, RefreshCw, Heart } from 'lucide-react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 export default function App() {
   const [activePage, setActivePage] = useState('ladder');
   const [selectedProblemId, setSelectedProblemId] = useState(null);
   const [user, setUser] = useState(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState('signin');
   const [systemHealth, setSystemHealth] = useState(null);
   const [isMaintenance, setIsMaintenance] = useState(false);
+  const [adminInitialProblemToEdit, setAdminInitialProblemToEdit] = useState(null);
 
-  useEffect(() => {
-    checkHealthAndAuth();
-  }, []);
-
-  const checkHealthAndAuth = async () => {
-    // 1. Health check (Roadmap 9.2)
+  async function checkHealthAndAuth() {
+    // 1. Health check
     try {
       const hRes = await fetch('/api/health');
       const hData = await hRes.json();
@@ -32,7 +29,7 @@ export default function App() {
       if (hData.maintenanceMode) {
         setIsMaintenance(true);
       }
-    } catch (err) {
+    } catch {
       console.warn('API health check unreachable');
     }
 
@@ -53,45 +50,26 @@ export default function App() {
         console.error('Session validation failed', err);
       }
     }
+  }
+
+  useEffect(() => {
+    checkHealthAndAuth();
+  }, []);
+
+  const handleOpenAuth = (mode = 'signin') => {
+    setAuthModalMode(mode);
+    setAuthModalOpen(true);
   };
 
-  const [adminInitialProblemToEdit, setAdminInitialProblemToEdit] = useState(null);
-
-  const handleQuickLoginAsAdmin = async () => {
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: 'admin@procode.edu', password: 'Admin@123' })
-      });
-      const data = await res.json();
-      if (res.ok && data.token) {
-        localStorage.setItem('procode_token', data.token);
-        setUser(data.user);
-        setActivePage('admin');
-      }
-    } catch (err) {
-      console.error('Quick admin login failed', err);
-      setAuthModalOpen(true);
-    }
+  const handleOpenHostLogin = () => {
+    setAuthModalMode('host');
+    setAuthModalOpen(true);
   };
 
-  const handleQuickLoginAsStudent = async () => {
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: 'rahul.verma@college.edu', password: 'Student@123' })
-      });
-      const data = await res.json();
-      if (res.ok && data.token) {
-        localStorage.setItem('procode_token', data.token);
-        setUser(data.user);
-        setActivePage('profile');
-      }
-    } catch (err) {
-      console.error('Quick student login failed', err);
-      setAuthModalOpen(true);
+  const handleAuthSuccess = (authenticatedUser) => {
+    setUser(authenticatedUser);
+    if (authenticatedUser?.role === 'admin') {
+      setActivePage('admin');
     }
   };
 
@@ -133,20 +111,20 @@ export default function App() {
   // Graceful Maintenance Mode Fallback Screen (Roadmap page 10)
   if (isMaintenance) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 text-slate-100">
-        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-4 shadow-2xl">
-          <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-center mx-auto text-amber-400">
-            <AlertTriangle size={32} />
+      <div className="min-h-screen bg-[#0B0F17] flex items-center justify-center p-6 text-slate-100">
+        <div className="max-w-md w-full bg-[#111726] border border-slate-800 rounded-3xl p-8 text-center space-y-4 shadow-2xl">
+          <div className="w-14 h-14 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center justify-center mx-auto text-blue-400">
+            <AlertTriangle size={28} />
           </div>
           <h2 className="text-2xl font-bold text-white tracking-tight">System Under Maintenance</h2>
           <p className="text-slate-400 text-sm leading-relaxed">
-            ProCode is currently deploying an update to the syllabus problem bank and compilation judge. We will be back online in approximately 10 minutes.
+            ProCode is currently deploying an update to the syllabus problem bank and compilation judge. We will be back online shortly.
           </p>
           <button
             onClick={() => window.location.reload()}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold transition"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition"
           >
-            <RefreshCw size={14} /> Check System Status
+            <RefreshCw size={14} /> Refresh Page
           </button>
         </div>
       </div>
@@ -155,27 +133,25 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-400/20 selection:text-amber-300">
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
         {/* Navigation Topbar */}
         <Navbar
           activePage={activePage}
           setActivePage={setActivePage}
           user={user}
-          onOpenAuth={() => setAuthModalOpen(true)}
-          onQuickAdminLogin={handleQuickLoginAsAdmin}
-          onQuickStudentLogin={handleQuickLoginAsStudent}
+          onOpenAuth={handleOpenAuth}
+          onOpenHostLogin={handleOpenHostLogin}
           onLogout={handleLogout}
         />
 
         {/* Page Views */}
-        <main className="flex-1">
+        <main className="flex-1 w-full">
           {activePage === 'ladder' && (
             <ProblemLadder
               user={user}
               onSelectProblem={handleSelectProblem}
-              onOpenAuth={() => setAuthModalOpen(true)}
-              onQuickAdminLogin={handleQuickLoginAsAdmin}
-              onQuickStudentLogin={handleQuickLoginAsStudent}
+              onOpenAuth={handleOpenAuth}
+              onOpenHostLogin={handleOpenHostLogin}
               onEditProblem={handleEditProblemFromLadder}
             />
           )}
@@ -185,21 +161,17 @@ export default function App() {
               problemId={selectedProblemId}
               onBack={handleBackToLadder}
               user={user}
-              onOpenAuth={() => setAuthModalOpen(true)}
+              onOpenAuth={handleOpenAuth}
               onPointsUpdated={handlePointsUpdated}
             />
           )}
 
-          {activePage === 'notes' && (
-            <NotesPage onNavigateToLadder={() => setActivePage('ladder')} />
-          )}
-
-          {activePage === 'papers' && (
-            <PapersPage />
+          {activePage === 'compiler' && (
+            <CompilerPage user={user} onOpenAuth={handleOpenAuth} />
           )}
 
           {activePage === 'leaderboard' && (
-            <LeaderboardPage user={user} onOpenAuth={() => setAuthModalOpen(true)} />
+            <LeaderboardPage user={user} onOpenAuth={handleOpenAuth} />
           )}
 
           {activePage === 'profile' && user && (
@@ -224,7 +196,7 @@ export default function App() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <span className="font-mono font-bold text-slate-300">
-                Pro<span className="text-amber-400">Code</span>
+                Pro<span className="text-blue-500">Code</span>
               </span>
               <span>&bull;</span>
               <span>College DSA &amp; Coding Practice Platform</span>
@@ -244,8 +216,9 @@ export default function App() {
         {/* Authentication Modal */}
         <AuthModal
           isOpen={authModalOpen}
+          initialMode={authModalMode}
           onClose={() => setAuthModalOpen(false)}
-          onAuthSuccess={(u) => setUser(u)}
+          onAuthSuccess={handleAuthSuccess}
         />
       </div>
     </ErrorBoundary>

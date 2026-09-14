@@ -1,6 +1,8 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
-const { Problem, Paper, Note, Report, User } = require('../services/db');
+const fs = require('fs');
+const path = require('path');
+const { Problem, Paper, Note, Report, User, getTopics, addTopic, deleteTopic } = require('../services/db');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
 // Public or student route to report suspected cheating
@@ -30,6 +32,51 @@ router.post('/report-cheat', authenticateToken, async (req, res) => {
 
 // --- ADMIN ONLY ROUTES ---
 router.use(authenticateToken, requireAdmin);
+
+// Topics Management
+router.get('/topics', async (req, res) => {
+  try {
+    res.json({ topics: getTopics() });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch topics.' });
+  }
+});
+
+router.post('/topics', async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Topic name is required.' });
+    }
+    const updated = addTopic(name);
+    res.status(201).json({ message: `Topic "${name.trim()}" added successfully.`, topics: updated });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to add topic.' });
+  }
+});
+
+router.delete('/topics', async (req, res) => {
+  try {
+    const topicName = req.body?.name || req.query?.name;
+    if (!topicName) {
+      return res.status(400).json({ error: 'Topic name is required.' });
+    }
+    const updated = deleteTopic(topicName);
+    res.json({ message: `Topic "${topicName}" deleted successfully.`, topics: updated });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete topic.' });
+  }
+});
+
+router.delete('/topics/:name', async (req, res) => {
+  try {
+    const topicName = req.params.name;
+    const updated = deleteTopic(topicName);
+    res.json({ message: `Topic "${topicName}" deleted successfully.`, topics: updated });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete topic.' });
+  }
+});
 
 // Get all problems with FULL details (including hidden test cases for editing)
 router.get('/problems', async (req, res) => {
@@ -106,6 +153,37 @@ router.delete('/problems/:id', async (req, res) => {
   }
 });
 
+// Upload PDF file for PYQ Papers or Course Materials
+router.post('/upload-pdf', async (req, res) => {
+  try {
+    const { filename, base64Data } = req.body;
+    if (!filename || !base64Data) {
+      return res.status(400).json({ error: 'Filename and base64Data are required.' });
+    }
+
+    const uploadsDir = path.join(__dirname, '..', 'data', 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    // Clean data URL prefix if present
+    const cleanBase64 = base64Data.replace(/^data:application\/pdf;base64,/, '').replace(/^data:[^;]+;base64,/, '');
+    const buffer = Buffer.from(cleanBase64, 'base64');
+
+    const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const uniqueName = `${Date.now()}_${safeName}`;
+    const filePath = path.join(uploadsDir, uniqueName);
+
+    fs.writeFileSync(filePath, buffer);
+
+    const fileUrl = `/uploads/${uniqueName}`;
+    res.json({ message: 'PDF uploaded successfully.', url: fileUrl, filename: uniqueName });
+  } catch (err) {
+    console.error('PDF upload error:', err);
+    res.status(500).json({ error: 'Failed to upload PDF file.' });
+  }
+});
+
 // Add previous year paper
 router.post('/papers', async (req, res) => {
   try {
@@ -116,6 +194,17 @@ router.post('/papers', async (req, res) => {
   }
 });
 
+// Delete paper
+router.delete('/papers/:id', async (req, res) => {
+  try {
+    const result = await Paper.deleteOne({ _id: req.params.id });
+    if (result.deletedCount === 0) return res.status(404).json({ error: 'Paper not found.' });
+    res.json({ message: 'Paper deleted successfully.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete paper.' });
+  }
+});
+
 // Add concept note
 router.post('/notes', async (req, res) => {
   try {
@@ -123,6 +212,17 @@ router.post('/notes', async (req, res) => {
     res.status(201).json({ message: 'Concept note added successfully.', note });
   } catch (err) {
     res.status(500).json({ error: 'Failed to add note.' });
+  }
+});
+
+// Delete concept note
+router.delete('/notes/:id', async (req, res) => {
+  try {
+    const result = await Note.deleteOne({ _id: req.params.id });
+    if (result.deletedCount === 0) return res.status(404).json({ error: 'Note not found.' });
+    res.json({ message: 'Concept note deleted successfully.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete note.' });
   }
 });
 

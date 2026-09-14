@@ -1,4 +1,4 @@
-﻿const fs = require('fs');
+const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
 
@@ -136,6 +136,20 @@ class JsonCollection {
     return { deletedCount: 0 };
   }
 
+  async findByIdAndDelete(id) {
+    return this.deleteOne({ _id: id });
+  }
+
+  async deleteMany(filter = {}) {
+    const store = readStore();
+    const list = store[this.name] || [];
+    const remaining = list.filter(item => !matchFilter(item, filter));
+    const deletedCount = list.length - remaining.length;
+    store[this.name] = remaining;
+    writeStore(store);
+    return { deletedCount };
+  }
+
   async countDocuments(filter = {}) {
     const items = await this.find(filter);
     return items.length;
@@ -162,15 +176,76 @@ async function connectDB() {
   }
 }
 
+const DEFAULT_TOPICS = [
+  'Arrays',
+  'Strings',
+  'Recursion',
+  'Searching',
+  'Sorting',
+  'Linked Lists',
+  'Stacks & Queues',
+  'Trees',
+  'Graphs',
+  'Dynamic Programming'
+];
+
+function normalizeTopic(t) {
+  return String(t || '').trim().toLowerCase().replace(/&/g, 'and').replace(/\//g, 'and').replace(/\s+/g, ' ');
+}
+
+function getTopics() {
+  const store = readStore();
+  if (store.topics === undefined || !Array.isArray(store.topics)) {
+    store.topics = [...DEFAULT_TOPICS];
+    writeStore(store);
+  }
+  return store.topics;
+}
+
+function addTopic(name) {
+  if (!name || typeof name !== 'string') return getTopics();
+  const trimmed = name.trim();
+  if (!trimmed) return getTopics();
+  const store = readStore();
+  if (!store.topics || !Array.isArray(store.topics)) {
+    store.topics = [...DEFAULT_TOPICS];
+  }
+  const normNew = normalizeTopic(trimmed);
+  const exists = store.topics.some(t => normalizeTopic(t) === normNew);
+  if (!exists) {
+    store.topics.push(trimmed);
+    writeStore(store);
+  }
+  return store.topics;
+}
+
+function deleteTopic(name) {
+  if (!name) return getTopics();
+  const store = readStore();
+  if (!store.topics || !Array.isArray(store.topics)) {
+    store.topics = [...DEFAULT_TOPICS];
+  }
+  const normTarget = normalizeTopic(name);
+  store.topics = store.topics.filter(t => normalizeTopic(t) !== normTarget);
+  writeStore(store);
+  return store.topics;
+}
+
 module.exports = {
   connectDB,
   isMongo: () => isMongoConnected,
   User: new JsonCollection('users'),
   Problem: new JsonCollection('problems'),
   Submission: new JsonCollection('submissions'),
+  Comment: new JsonCollection('comments'),
   Note: new JsonCollection('notes'),
   Paper: new JsonCollection('papers'),
   Report: new JsonCollection('reports'),
+  SavedCode: new JsonCollection('savedCodes'),
+  UserFolder: new JsonCollection('userFolders'),
+  getTopics,
+  addTopic,
+  deleteTopic,
   readStore,
   writeStore
 };

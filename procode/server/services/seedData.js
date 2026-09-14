@@ -724,11 +724,11 @@ const initialPapers = [
 const initialUsers = [
   {
     _id: "usr_admin",
-    name: "Faculty Administrator",
+    name: "Host Administrator",
     email: "admin@procode.edu",
     passwordHash: bcrypt.hashSync("Admin@123", 10),
     role: "admin",
-    batch: "Faculty / Host",
+    batch: "Host Admin",
     alias: "HostAdmin",
     careerPoints: 0,
     rankTier: "Bronze",
@@ -760,18 +760,17 @@ async function seedDatabase(db) {
 
   const uCount = await db.User.countDocuments();
   if (uCount === 0) {
-    console.log('Seeding demo college students and admin...');
+    console.log('Seeding host administrator...');
     for (const u of initialUsers) await db.User.create(u);
     for (const s of initialSubmissions) await db.Submission.create(s);
   }
 }
 
 function calculateTier(points) {
-  if (points >= 3000) return 'Conqueror';
-  if (points >= 1500) return 'Diamond';
-  if (points >= 700) return 'Platinum';
-  if (points >= 300) return 'Gold';
-  if (points >= 80) return 'Silver';
+  const pts = Number(points) || 0;
+  if (pts > 700) return 'Cosmic Grandmaster';
+  if (pts >= 250) return 'Gold Coder';
+  if (pts >= 100) return 'Silver Knight';
   return 'Bronze';
 }
 

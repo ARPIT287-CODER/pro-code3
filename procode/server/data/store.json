@@ -2,16 +2,37 @@
   "users": [
     {
       "_id": "usr_admin",
-      "name": "Faculty Administrator",
+      "name": "Host Administrator",
       "email": "admin@procode.edu",
       "passwordHash": "$2a$10$uxfYFbWWmEwC0AVacfM2aeQ2nySd4DHM/5UtmmjchN8xYU7akeqpa",
       "role": "admin",
-      "batch": "Faculty / Host",
+      "batch": "Host Admin",
       "alias": "HostAdmin",
       "careerPoints": 0,
       "rankTier": "Gold",
       "solvedProblems": [],
       "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=ProCodeAdmin"
+    },
+    {
+      "_id": "id_1789387560986_bhk9yh",
+      "createdAt": "2026-09-14T12:06:00.986Z",
+      "updatedAt": "2026-09-14T12:36:14.619Z",
+      "name": "john12",
+      "email": "arpitchauhan0808@gmail.com",
+      "passwordHash": "$2a$10$k8q/9anjKsP7Pa1wuz2MoOwQpbu3zsMNNOz1yQo3Fv.gO2rJj3zFO",
+      "role": "student",
+      "batch": "CSE - AI & ML",
+      "alias": "john12",
+      "careerPoints": 65,
+      "rankTier": "Bronze",
+      "solvedProblems": [
+        "prob_arr_01",
+        "prob_stack_01",
+        "prob_str_01",
+        "prob_rec_01",
+        "prob_search_01"
+      ],
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=john12"
     }
   ],
   "problems": [
@@ -77,58 +98,6 @@
       ]
     },
     {
-      "_id": "prob_arr_02",
-      "createdAt": "2026-09-13T12:56:16.161Z",
-      "updatedAt": "2026-09-13T12:56:16.161Z",
-      "title": "Find Second Largest Element",
-      "topic": "Arrays",
-      "difficulty": "Easy",
-      "points": 10,
-      "examUnit": "Unit 1: Linear Data Structures",
-      "collegeExamReference": "Mid-Term Oct 2023 (Q2, 5 Marks)",
-      "description": "Given an array `arr` of `N` integers, find the second largest distinct element in the array in a single pass O(N) time. If no distinct second largest exists, output -1.",
-      "constraints": "2 <= N <= 10^5\n-10^9 <= arr[i] <= 10^9",
-      "inputFormat": "First line contains N.\nSecond line contains N integers.",
-      "outputFormat": "Print the second largest distinct element or -1.",
-      "sampleTestCases": [
-        {
-          "input": "5\n12 35 1 10 34",
-          "expectedOutput": "34",
-          "explanation": "Largest is 35, second largest distinct is 34."
-        },
-        {
-          "input": "3\n10 10 10",
-          "expectedOutput": "-1",
-          "explanation": "All elements are equal, so second distinct largest does not exist."
-        }
-      ],
-      "hiddenTestCases": [
-        {
-          "input": "4\n-10 -20 -30 -40",
-          "expectedOutput": "-20"
-        },
-        {
-          "input": "6\n5 1 2 5 3 4",
-          "expectedOutput": "4"
-        }
-      ],
-      "starterCode": {
-        "c": "#include <stdio.h>\n\nint main() {\n    int n; if (scanf(\"%d\", &n) != 1) return 0;\n    long long first = -2000000000, second = -2000000000;\n    for(int i = 0; i < n; i++) {\n        long long x; scanf(\"%lld\", &x);\n        if (x > first) { second = first; first = x; }\n        else if (x < first && x > second) { second = x; }\n    }\n    printf(\"%lld\", (second == -2000000000 ? -1 : second));\n    return 0;\n}",
-        "cpp": "#include <iostream>\nusing namespace std;\n\nint main() {\n    int n; if (!(cin >> n)) return 0;\n    long long first = -2e9, second = -2e9;\n    for(int i=0; i<n; i++) {\n        long long x; cin >> x;\n        if (x > first) { second = first; first = x; }\n        else if (x < first && x > second) { second = x; }\n    }\n    cout << (second == -2e9 ? -1 : second);\n    return 0;\n}",
-        "java": "import java.util.Scanner;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();\n        long f = Long.MIN_VALUE, s = Long.MIN_VALUE;\n        for(int i=0; i<n; i++){\n            long x = sc.nextLong();\n            if (x > f) { s = f; f = x; }\n            else if (x < f && x > s) { s = x; }\n        }\n        System.out.print(s == Long.MIN_VALUE ? -1 : s);\n    }\n}",
-        "python": "import sys\n\ndef main():\n    nums = [int(x) for x in sys.stdin.read().split()]\n    if not nums: return\n    n = nums[0]\n    distinct = sorted(list(set(nums[1:n+1])))\n    print(distinct[-2] if len(distinct) >= 2 else -1)\n\nif __name__ == '__main__':\n    main()"
-      },
-      "isGraduationProblem": false,
-      "leetcodeUrl": "https://leetcode.com/problems/third-maximum-number/",
-      "suggestedLeetcode": [
-        {
-          "title": "Third Maximum Number (LeetCode #414)",
-          "difficulty": "Easy",
-          "url": "https://leetcode.com/problems/third-maximum-number/"
-        }
-      ]
-    },
-    {
       "_id": "prob_arr_03",
       "createdAt": "2026-09-13T12:56:16.163Z",
       "updatedAt": "2026-09-13T12:56:16.163Z",
@@ -182,58 +151,6 @@
           "title": "3Sum (LeetCode #15)",
           "difficulty": "Medium",
           "url": "https://leetcode.com/problems/3sum/"
-        }
-      ]
-    },
-    {
-      "_id": "prob_arr_04",
-      "createdAt": "2026-09-13T12:56:16.166Z",
-      "updatedAt": "2026-09-13T12:56:16.166Z",
-      "title": "Container With Most Water (Graduation)",
-      "topic": "Arrays",
-      "difficulty": "Hard",
-      "points": 50,
-      "examUnit": "Unit 1: Linear Data Structures",
-      "collegeExamReference": "Competitive Programming Honors 2024",
-      "description": "You are given an integer array `height` of length `n`. There are `n` vertical lines drawn such that the two endpoints of the `i-th` line are `(i, 0)` and `(i, height[i])`. Find two lines that together with the x-axis form a container that stores the maximum amount of water. Return the maximum amount of water a container can store.",
-      "constraints": "2 <= n <= 10^5\n0 <= height[i] <= 10^4",
-      "inputFormat": "First line: n\nSecond line: n integers",
-      "outputFormat": "Print the maximum area of water stored.",
-      "sampleTestCases": [
-        {
-          "input": "9\n1 8 6 2 5 4 8 3 7",
-          "expectedOutput": "49",
-          "explanation": "Between index 1 (height 8) and index 8 (height 7), width 7 * 7 = 49."
-        },
-        {
-          "input": "2\n1 1",
-          "expectedOutput": "1",
-          "explanation": "Width 1, height 1. Area = 1."
-        }
-      ],
-      "hiddenTestCases": [
-        {
-          "input": "4\n4 3 2 1 4",
-          "expectedOutput": "16"
-        },
-        {
-          "input": "5\n1 2 1 2 1",
-          "expectedOutput": "4"
-        }
-      ],
-      "starterCode": {
-        "c": "#include <stdio.h>\nint main() { printf(\"49\"); return 0; }",
-        "cpp": "#include <iostream>\n#include <vector>\nusing namespace std;\nint main() {\n    int n; cin >> n; vector<int> h(n);\n    for(int i=0; i<n; i++) cin >> h[i];\n    int l = 0, r = n - 1, ans = 0;\n    while(l < r) {\n        ans = max(ans, min(h[l], h[r]) * (r - l));\n        if (h[l] < h[r]) l++; else r--;\n    }\n    cout << ans;\n    return 0;\n}",
-        "java": "import java.util.Scanner;\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt(); int[] h = new int[n];\n        for(int i=0; i<n; i++) h[i] = sc.nextInt();\n        int l = 0, r = n - 1, maxA = 0;\n        while(l < r){\n            maxA = Math.max(maxA, Math.min(h[l], h[r]) * (r - l));\n            if(h[l] < h[r]) l++; else r--;\n        }\n        System.out.print(maxA);\n    }\n}",
-        "python": "import sys\ndef main():\n    p = sys.stdin.read().split()\n    if not p: return\n    n = int(p[0])\n    h = [int(x) for x in p[1:n+1]]\n    l, r, ans = 0, n - 1, 0\n    while l < r:\n        ans = max(ans, min(h[l], h[r]) * (r - l))\n        if h[l] < h[r]: l += 1\n        else: r -= 1\n    print(ans)\nif __name__ == '__main__': main()"
-      },
-      "isGraduationProblem": true,
-      "leetcodeUrl": "https://leetcode.com/problems/container-with-most-water/",
-      "suggestedLeetcode": [
-        {
-          "title": "Trapping Rain Water (LeetCode #42)",
-          "difficulty": "Hard",
-          "url": "https://leetcode.com/problems/trapping-rain-water/"
         }
       ]
     },
@@ -451,7 +368,120 @@
       ]
     }
   ],
-  "submissions": [],
+  "submissions": [
+    {
+      "_id": "id_1789387575643_w7vk41",
+      "createdAt": "2026-09-14T12:06:15.641Z",
+      "updatedAt": "2026-09-14T12:06:15.643Z",
+      "userId": "id_1789387560986_bhk9yh",
+      "userName": "john12",
+      "userBatch": "CSE - AI & ML",
+      "userAlias": "john12",
+      "problemId": "prob_arr_01",
+      "problemTitle": "Reverse an Array In-Place",
+      "language": "cpp",
+      "status": "Accepted",
+      "runtime": 19,
+      "memory": 15125,
+      "pointsAwarded": 10
+    },
+    {
+      "_id": "id_1789387587606_467yfr",
+      "createdAt": "2026-09-14T12:06:27.604Z",
+      "updatedAt": "2026-09-14T12:06:27.607Z",
+      "userId": "id_1789387560986_bhk9yh",
+      "userName": "john12",
+      "userBatch": "CSE - AI & ML",
+      "userAlias": "john12",
+      "problemId": "prob_stack_01",
+      "problemTitle": "Balanced Parentheses Checker",
+      "language": "cpp",
+      "status": "Accepted",
+      "runtime": 23,
+      "memory": 14994,
+      "pointsAwarded": 10
+    },
+    {
+      "_id": "id_1789387595524_ar3pig",
+      "createdAt": "2026-09-14T12:06:35.522Z",
+      "updatedAt": "2026-09-14T12:06:35.524Z",
+      "userId": "id_1789387560986_bhk9yh",
+      "userName": "john12",
+      "userBatch": "CSE - AI & ML",
+      "userAlias": "john12",
+      "problemId": "prob_str_01",
+      "problemTitle": "Check String Palindrome",
+      "language": "cpp",
+      "status": "Accepted",
+      "runtime": 21,
+      "memory": 14866,
+      "pointsAwarded": 10
+    },
+    {
+      "_id": "id_1789387610530_jpw226",
+      "createdAt": "2026-09-14T12:06:50.528Z",
+      "updatedAt": "2026-09-14T12:06:50.530Z",
+      "userId": "id_1789387560986_bhk9yh",
+      "userName": "john12",
+      "userBatch": "CSE - AI & ML",
+      "userAlias": "john12",
+      "problemId": "prob_str_01",
+      "problemTitle": "Check String Palindrome",
+      "language": "c",
+      "status": "Accepted",
+      "runtime": 23,
+      "memory": 15202,
+      "pointsAwarded": 0
+    },
+    {
+      "_id": "id_1789389348617_zoz81y",
+      "createdAt": "2026-09-14T12:35:48.615Z",
+      "updatedAt": "2026-09-14T12:35:48.617Z",
+      "userId": "id_1789387560986_bhk9yh",
+      "userName": "john12",
+      "userBatch": "CSE - AI & ML",
+      "userAlias": "john12",
+      "problemId": "prob_rec_01",
+      "problemTitle": "Tower of Hanoi Moves",
+      "language": "cpp",
+      "status": "Accepted",
+      "runtime": 20,
+      "memory": 15001,
+      "pointsAwarded": 25
+    },
+    {
+      "_id": "id_1789389363623_ly4g60",
+      "createdAt": "2026-09-14T12:36:03.621Z",
+      "updatedAt": "2026-09-14T12:36:03.623Z",
+      "userId": "id_1789387560986_bhk9yh",
+      "userName": "john12",
+      "userBatch": "CSE - AI & ML",
+      "userAlias": "john12",
+      "problemId": "prob_arr_01",
+      "problemTitle": "Reverse an Array In-Place",
+      "language": "cpp",
+      "status": "Accepted",
+      "runtime": 19,
+      "memory": 15198,
+      "pointsAwarded": 0
+    },
+    {
+      "_id": "id_1789389374624_4ovx5g",
+      "createdAt": "2026-09-14T12:36:14.620Z",
+      "updatedAt": "2026-09-14T12:36:14.624Z",
+      "userId": "id_1789387560986_bhk9yh",
+      "userName": "john12",
+      "userBatch": "CSE - AI & ML",
+      "userAlias": "john12",
+      "problemId": "prob_search_01",
+      "problemTitle": "Binary Search in Sorted Array",
+      "language": "cpp",
+      "status": "Accepted",
+      "runtime": 23,
+      "memory": 14944,
+      "pointsAwarded": 10
+    }
+  ],
   "notes": [
     {
       "_id": "note_01",
@@ -576,5 +606,9 @@
       "description": "Previous year paper focusing on AVL Trees rotation, Infix-to-Postfix step table, and QuickSort partitioning."
     }
   ],
-  "reports": []
+  "reports": [],
+  "topics": [
+    "Arrays"
+  ],
+  "savedCodes": []
 }

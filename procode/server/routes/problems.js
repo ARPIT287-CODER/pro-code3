@@ -1,7 +1,17 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
-const { Problem } = require('../services/db');
+const { Problem, Comment, getTopics } = require('../services/db');
 const { optionalAuth } = require('../middleware/auth');
+
+// Get all DSA topics
+router.get('/topics', async (req, res) => {
+  try {
+    const topics = getTopics();
+    res.json({ topics });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch topics.' });
+  }
+});
 
 // Get all problems with optional filters & user solved status
 router.get('/', optionalAuth, async (req, res) => {
@@ -95,7 +105,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
       return res.status(404).json({ error: 'Problem not found.' });
     }
 
-    const { hiddenTestCases, ...safeProblem } = problem;
+    const { hiddenTestCases, starterCode, ...safeProblem } = problem;
     const isSolved = req.user ? (req.user.solvedProblems || []).includes(problem._id) : false;
 
     res.json({
@@ -107,6 +117,75 @@ router.get('/:id', optionalAuth, async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch problem details.' });
+  }
+});
+
+// --- PROBLEM COMMENTS / DISCUSSION ENDPOINTS ---
+// Get comments for a problem
+router.get('/:id/comments', async (req, res) => {
+  try {
+    const comments = await Comment.find({ problemId: req.params.id });
+    comments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    res.json({ comments });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch comments.' });
+  }
+});
+
+// Post a comment for a problem
+router.post('/:id/comments', optionalAuth, async (req, res) => {
+  try {
+    const rawText = req.body.content || req.body.text;
+    if (!rawText || !rawText.trim()) {
+      return res.status(400).json({ error: 'Comment text is required.' });
+    }
+
+    const authorName = req.user?.name || req.user?.alias || req.body.userName || 'Anonymous Coder';
+    const authorAvatar = req.user?.avatar || req.body.userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(authorName)}`;
+    const authorPoints = req.user?.careerPoints !== undefined ? req.user.careerPoints : (req.body.userPoints || 0);
+    const authorTier = req.user?.rankTier || req.body.userRankTier || 'Bronze';
+    const authorBatch = req.user?.batch || req.body.userBatch || 'CSE';
+    const authorId = req.user?._id || req.body?.userId || null;
+    const authorRole = req.user?.role || (authorName.toLowerCase().includes('host') ? 'admin' : 'student');
+
+    const newComment = await Comment.create({
+      problemId: req.params.id,
+      text: rawText.trim(),
+      content: rawText.trim(),
+      userName: authorName,
+      userAvatar: authorAvatar,
+      userPoints: authorPoints,
+      userRankTier: authorTier,
+      userBatch: authorBatch,
+      userRole: authorRole,
+      userId: authorId,
+      createdAt: new Date().toISOString()
+    });
+
+    const allComments = await Comment.find({ problemId: req.params.id });
+    allComments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.status(201).json({ message: 'Comment posted!', comment: newComment, comments: allComments });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to post comment.' });
+  }
+});
+
+// Delete a comment
+router.delete('/:id/comments/:commentId', optionalAuth, async (req, res) => {
+  try {
+    const comment = await Comment.findById(req.params.commentId);
+    if (!comment) return res.status(404).json({ error: 'Comment not found.' });
+
+    // Allow author or admin to delete
+    if (req.user && req.user.role !== 'admin' && String(comment.userId) !== String(req.user._id)) {
+      return res.status(403).json({ error: 'Not authorized to delete this comment.' });
+    }
+
+    await Comment.deleteOne({ _id: req.params.commentId });
+    res.json({ message: 'Comment deleted successfully.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete comment.' });
   }
 });
 

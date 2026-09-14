@@ -1,4 +1,4 @@
-﻿const fs = require('fs');
+const fs = require('fs');
 const path = require('path');
 const PDFDocument = require('pdfkit');
 
@@ -132,10 +132,10 @@ doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(36).text('ProCode', 50,
 doc.fillColor(COLOR_ACCENT).fontSize(16).text('COLLEGE DSA & CODING PRACTICE PLATFORM', 50, 120);
 
 doc.fillColor('#94A3B8').font('Helvetica').fontSize(12).lineGap(4);
-doc.text('A curriculum-aligned coding platform built for first-year students to practice syllabus DSA, compete on class leaderboards, and seamlessly graduate to LeetCode.', 50, 150, { width: 495 });
+doc.text('A curriculum-aligned coding platform built for first-year students to practice syllabus DSA, compete on class leaderboards, and make their core programming basics rock-solid.', 50, 150, { width: 495 });
 
 doc.fillColor('#E2E8F0').font('Helvetica-Bold').fontSize(10);
-doc.text('TECHNICAL ARCHITECTURE  |  HOSTING RUNBOOK  |  STUDENT USER MANUAL', 50, 230);
+doc.text('TECHNICAL ARCHITECTURE  |  HOSTING RUNBOOK  |  AIM & STUDENT GUIDE', 50, 230);
 doc.restore();
 
 doc.y = 310;
@@ -317,10 +317,10 @@ drawCallout(
 // PAGE 6: STUDENT USER INSTRUCTIONS
 // ==========================================
 doc.addPage();
-drawHeader('Chapter 4 — Student User Manual');
-drawSectionHeading('4', 'User Instructions for Students (How to Use ProCode)');
+drawHeader('Chapter 4 — Aim of this Site & Student Guide');
+drawSectionHeading('4', 'Aim of this Site & Student Guide (How to Use ProCode)');
 
-drawParagraph('Welcome to ProCode! This platform was built specifically to help you ace your internal college exams, master DSA fundamentals, and graduate confidently to LeetCode.');
+drawParagraph('Welcome to ProCode! This platform was built specifically to help you ace your internal college exams, build rock-solid DSA foundations, and make your coding basics good.');
 
 drawSubHeading('4.1 Creating Your Account & Joining Your Batch');
 drawParagraph('1. Click "Join / Sign In" at the top right of the navigation bar.');

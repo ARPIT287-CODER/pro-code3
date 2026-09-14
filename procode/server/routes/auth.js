@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -13,6 +13,10 @@ router.post('/register', authLimiter, async (req, res) => {
 
     if (!name || !email || !password || !batch) {
       return res.status(400).json({ error: 'Name, email, password, and batch are required.' });
+    }
+
+    if (password.length < 5) {
+      return res.status(400).json({ error: 'Password must be at least 5 characters long.' });
     }
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -63,6 +67,10 @@ router.post('/login', authLimiter, async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    if (password.length < 5) {
+      return res.status(400).json({ error: 'Password must be at least 5 characters long.' });
     }
 
     const normalizedEmail = email.trim().toLowerCase();

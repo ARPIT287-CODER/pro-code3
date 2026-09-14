@@ -1,0 +1,26 @@
+﻿# Dependency and build directories
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+
+# Environment variables & secrets (NEVER COMMIT)
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+
+# Logs and OS files
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Temporary compiler execution files
+procode/server/data/temp/*
+!procode/server/data/temp/.gitkeep
+
+# Uploads
+procode/server/data/uploads/*
+!procode/server/data/uploads/.gitkeep

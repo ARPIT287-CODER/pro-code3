@@ -1,4 +1,4 @@
-﻿require('dotenv').config();
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -16,6 +16,7 @@ const leaderboardRoutes = require('./routes/leaderboards');
 const noteRoutes = require('./routes/notes');
 const paperRoutes = require('./routes/papers');
 const adminRoutes = require('./routes/admin');
+const compilerRoutes = require('./routes/compiler');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -31,10 +32,17 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // Middleware stack
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json({ limit: '5mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(generalLimiter);
 app.use(maintenanceMiddleware);
+
+// Serve uploads directory for Host uploaded PDFs & notes
+const UPLOADS_DIR = path.join(__dirname, 'data', 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+app.use('/uploads', express.static(UPLOADS_DIR));
 
 // Serve Client Static Production Build if present
 const CLIENT_DIST = path.join(__dirname, '..', 'client', 'dist');
@@ -79,6 +87,11 @@ app.get('/api/health', async (req, res) => {
 });
 
 // API Routes
+app.get('/api/topics', (req, res) => {
+  const { getTopics } = require('./services/db');
+  res.json({ topics: getTopics() });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/problems', problemRoutes);
 app.use('/api/submissions', submissionRoutes);
@@ -86,6 +99,7 @@ app.use('/api/leaderboards', leaderboardRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/papers', paperRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/compiler', compilerRoutes);
 
 // SPA fallback for frontend routing
 app.get('*', (req, res) => {

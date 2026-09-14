@@ -1,46 +1,85 @@
 import React, { useState, useEffect } from 'react';
-import { Terminal, CheckCircle2, Circle, ExternalLink, Award, Sparkles, Filter, Search, ChevronRight, BookOpen, Layers, ShieldCheck, Edit3, User, School, FileDown, ShieldAlert } from 'lucide-react';
+import { Terminal, CheckCircle2, Circle, Award, Search, ChevronRight, Layers, ShieldCheck, Edit3, ShieldAlert, Sparkles } from 'lucide-react';
 import TierBadge from '../components/TierBadge';
+import AvatarFrame from '../components/AvatarFrame';
 
-export default function ProblemLadder({ onSelectProblem, user, onOpenAuth, onQuickAdminLogin, onQuickStudentLogin, onEditProblem }) {
+export default function ProblemLadder({ onSelectProblem, user, onOpenAuth, onOpenHostLogin, onEditProblem }) {
   const [problems, setProblems] = useState([]);
+  const [topics, setTopics] = useState(['All', 'Arrays', 'Strings', 'Recursion', 'Searching', 'Sorting', 'Linked Lists', 'Stacks & Queues', 'Trees', 'Graphs', 'Dynamic Programming']);
   const [loading, setLoading] = useState(true);
   const [selectedTopic, setSelectedTopic] = useState('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState('All');
-  const [selectedBranch, setSelectedBranch] = useState('All Branches');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const branches = [
-    'All Branches',
-    'CSE (Core)',
-    'CSE - AI & ML',
-    'CSE - Data Science',
-    'ECE (Electronics)',
-    'ELCE / EEE',
-    'IT (Information Tech)',
-    'Mechanical / Civil'
+  // Animated dynamic headline typewriter effect
+  const phrases = [
+    'make your fundamentals rock-solid.',
+    'crack semester coding exams with ease.',
+    'master pointers, trees & recursion step-by-step.',
+    'turn you into a confident top-tier coder.',
+    'build unshakeable problem-solving skills.'
   ];
-  const topics = ['All', 'Arrays', 'Strings', 'Recursion', 'Searching', 'Stacks/Queues'];
-  const difficulties = ['All', 'Easy', 'Medium', 'Hard'];
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const [displayText, setDisplayText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    fetchProblems();
-  }, [user]);
+    const currentPhrase = phrases[phraseIndex];
+    let timer;
 
-  const fetchProblems = async () => {
+    if (!isDeleting && displayText === currentPhrase) {
+      timer = setTimeout(() => setIsDeleting(true), 2000);
+    } else if (isDeleting && displayText === '') {
+      setIsDeleting(false);
+      setPhraseIndex((prev) => (prev + 1) % phrases.length);
+    } else {
+      const speed = isDeleting ? 30 : 55;
+      timer = setTimeout(() => {
+        setDisplayText(
+          isDeleting
+            ? currentPhrase.substring(0, displayText.length - 1)
+            : currentPhrase.substring(0, displayText.length + 1)
+        );
+      }, speed);
+    }
+
+    return () => clearTimeout(timer);
+  }, [displayText, isDeleting, phraseIndex]);
+
+  const difficulties = ['All', 'Easy', 'Medium', 'Hard'];
+
+  async function fetchProblems() {
     try {
       setLoading(true);
       const token = localStorage.getItem('procode_token');
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch('/api/problems', { headers });
-      const data = await res.json();
-      setProblems(data.problems || []);
+      const [pRes, tRes] = await Promise.all([
+        fetch('/api/problems', { headers }),
+        fetch('/api/topics')
+      ]);
+      if (pRes.ok) {
+        const data = await pRes.json();
+        setProblems(data.problems || []);
+      }
+      if (tRes.ok) {
+        const ct = tRes.headers.get('content-type');
+        if (ct && ct.includes('application/json')) {
+          const tData = await tRes.json();
+          if (tData.topics && Array.isArray(tData.topics)) {
+            setTopics(['All', ...tData.topics]);
+          }
+        }
+      }
     } catch (err) {
-      console.error('Failed to load problems', err);
+      console.error('Failed to load problems or topics', err);
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    fetchProblems();
+  }, [user]);
 
   const filteredProblems = problems.filter(p => {
     if (selectedTopic !== 'All' && p.topic.toLowerCase() !== selectedTopic.toLowerCase()) return false;
@@ -61,197 +100,140 @@ export default function ProblemLadder({ onSelectProblem, user, onOpenAuth, onQui
 
   const getDifficultyColor = (diff) => {
     switch (diff) {
-      case 'Easy': return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
-      case 'Medium': return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
-      case 'Hard': return 'text-rose-400 bg-rose-500/10 border-rose-500/20';
-      default: return 'text-slate-400 bg-slate-800 border-slate-700';
+      case 'Easy': return 'text-emerald-700 bg-emerald-50 border-emerald-200';
+      case 'Medium': return 'text-sky-700 bg-sky-50 border-sky-200';
+      case 'Hard': return 'text-blue-800 bg-blue-50 border-blue-200';
+      default: return 'text-slate-600 bg-slate-100 border-slate-200';
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Top Quick Feature & Host Control Hub */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Host / Admin Quick Access */}
-        <div className="bg-gradient-to-br from-amber-500/10 via-slate-900 to-slate-900 border border-amber-500/30 rounded-2xl p-4 flex flex-col justify-between shadow-lg">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider">
-              <ShieldAlert size={15} />
-              <span>Host &amp; Faculty Console</span>
-            </div>
-            <p className="text-xs text-slate-300">
+    <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
+      {/* Platform Aim Notice & Quick Access */}
+      <div className="bg-gradient-to-r from-sky-50 via-white to-blue-50 border border-sky-100 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-600 shrink-0">
+            <Sparkles size={18} />
+          </div>
+          <div>
+            <h4 className="text-xs font-bold text-slate-800">
+              {user?.role === 'admin' ? 'Host Command Active' : 'Aim of ProCode: Build Solid Core Basics'}
+            </h4>
+            <p className="text-[11px] text-slate-600">
               {user?.role === 'admin'
-                ? '⭐ Host Mode Active: You can create new questions, modify test cases, and delete problems.'
-                : 'Want to add, edit, or delete questions? Access Host Mode to manage the question bank.'}
+                ? 'Host permissions enabled. You can create questions and manage curriculum topics.'
+                : 'This platform is built specifically to strengthen your fundamentals in C, C++, and DSA for college exams.'}
             </p>
-          </div>
-          <div className="mt-3">
-            {user?.role === 'admin' ? (
-              <button
-                onClick={() => onEditProblem(null)}
-                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold transition cursor-pointer"
-              >
-                <Edit3 size={14} /> Open Admin Question Bank
-              </button>
-            ) : (
-              <button
-                onClick={onQuickAdminLogin}
-                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 rounded-xl text-xs font-bold shadow-md shadow-amber-500/20 transition cursor-pointer"
-              >
-                <ShieldCheck size={14} /> 👑 Enter Host Mode (1-Click)
-              </button>
-            )}
           </div>
         </div>
 
-        {/* LeetCode Consistency Profile Quick Access */}
-        <div className="bg-gradient-to-br from-indigo-500/10 via-slate-900 to-slate-900 border border-indigo-500/30 rounded-2xl p-4 flex flex-col justify-between shadow-lg">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider">
-              <Sparkles size={15} />
-              <span>Consistency &amp; Streak Engine</span>
-            </div>
-            <p className="text-xs text-slate-300">
-              LeetCode-style 16-week activity heatmap, daily streaks, solve rates, and college branch settings.
-            </p>
-          </div>
-          <div className="mt-3">
+        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+          {user?.role === 'admin' ? (
             <button
-              onClick={onQuickStudentLogin}
-              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-bold transition cursor-pointer"
+              onClick={() => onEditProblem(null)}
+              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-sm transition cursor-pointer flex items-center gap-1.5"
             >
-              <User size={14} /> ⚡ View Rahul Profile (Heatmap Demo)
+              <Edit3 size={13} />
+              <span>Admin Console</span>
             </button>
-          </div>
-        </div>
-
-        {/* Documentation PDF Quick Access */}
-        <div className="bg-gradient-to-br from-emerald-500/10 via-slate-900 to-slate-900 border border-emerald-500/30 rounded-2xl p-4 flex flex-col justify-between shadow-lg">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-wider">
-              <BookOpen size={15} />
-              <span>Official System Manual</span>
-            </div>
-            <p className="text-xs text-slate-300">
-              Publication-ready 6-page PDF with build details, host instructions, and student guide.
-            </p>
-          </div>
-          <div className="mt-3">
-            <a
-              href="/download-pdf"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold transition cursor-pointer"
+          ) : (
+            <button
+              onClick={onOpenHostLogin}
+              className="px-3.5 py-1.5 bg-white hover:bg-sky-50 text-slate-700 border border-slate-200 hover:border-sky-300 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
             >
-              <FileDown size={14} /> 📄 Download Host &amp; Student PDF
-            </a>
-          </div>
+              <ShieldAlert size={14} className="text-sky-500" />
+              <span>Host Console</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Hero Banner (Roadmap Page 1 & 2) */}
-      <div className="relative rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950/70 border border-slate-800 p-6 sm:p-10 overflow-hidden shadow-2xl">
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 right-24 -mb-20 w-60 h-60 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="max-w-3xl relative z-10 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-xs font-semibold uppercase tracking-wider">
-            <Sparkles size={13} />
-            <span>Curriculum-Aligned DSA Ladder</span>
+      {/* Hero Banner with Modern White / Sky-Blue Aesthetic & Text Animation */}
+      <div className="relative rounded-3xl bg-white border border-slate-200/90 p-6 sm:p-9 overflow-hidden shadow-xs">
+        {/* Animated ambient gradient glow orbs */}
+        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-88 h-88 bg-gradient-to-br from-sky-400/15 via-blue-500/10 to-transparent rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
+        <div className="absolute bottom-0 left-1/3 -mb-12 w-64 h-64 bg-gradient-to-tr from-blue-400/10 to-sky-300/10 rounded-full blur-2xl pointer-events-none animate-float" />
+        
+        <div className="max-w-4xl relative z-10 space-y-4">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-50 border border-sky-200/80 text-sky-800 text-xs font-bold shadow-2xs">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500" />
+            </span>
+            <Terminal size={13} className="text-sky-600" />
+            <span>Core Foundation DSA Training</span>
           </div>
-          <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
-            Master College Exams.<br />
-            <span className="bg-gradient-to-r from-amber-400 via-orange-400 to-indigo-400 bg-clip-text text-transparent">
-              Graduate to LeetCode.
+
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight">
+            Build Rock-Solid Core DSA Basics.<br />
+            <span className="inline-block mt-2 min-h-[44px] sm:min-h-[52px]">
+              <span className="bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent animate-gradient-text">
+                This site will {displayText}
+              </span>
+              <span className="inline-block w-[3px] h-7 sm:h-9 bg-sky-500 ml-1.5 translate-y-1 sm:translate-y-1.5 animate-cursor rounded-full shadow-xs" />
             </span>
           </h1>
-          <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-            Built specifically around real syllabus units, previous-year college question papers, and lab vivas.
-            Each topic ladders from foundational concepts directly to equivalent LeetCode graduation problems.
+
+          <p className="text-slate-600 text-xs sm:text-sm leading-relaxed max-w-2xl">
+            A dedicated platform designed to build strong programming foundations in C, C++, and core Data Structures. Master syllabus problem sets, semester exam questions, and memory concepts step-by-step with authentic test verification.
           </p>
 
           {/* Quick Stats Progress Bar */}
           <div className="pt-2 flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="flex-1 bg-slate-950/80 border border-slate-800 p-4 rounded-2xl">
+            <div className="flex-1 bg-slate-50 border border-slate-200 p-3.5 rounded-2xl">
               <div className="flex justify-between items-center text-xs mb-2">
-                <span className="font-semibold text-slate-300 flex items-center gap-1.5">
-                  <CheckCircle2 size={15} className="text-emerald-400" />
-                  Your Syllabus Progress
+                <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                  <CheckCircle2 size={14} className="text-emerald-500" />
+                  Problems Solved Progress
                 </span>
-                <span className="font-mono text-amber-400 font-bold">{solvedCount} of {totalCount} Solved ({progressPercent}%)</span>
+                <span className="font-mono text-sky-700 font-bold">{solvedCount} of {totalCount} Solved ({progressPercent}%)</span>
               </div>
-              <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+              <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-amber-400 rounded-full transition-all duration-500"
+                  className="h-full bg-gradient-to-r from-blue-600 to-sky-400 rounded-full transition-all duration-500"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
             </div>
 
             {user ? (
-              <div className="flex items-center gap-3 bg-slate-950/80 border border-slate-800 px-5 py-4 rounded-2xl">
+              <div className="flex items-center gap-3.5 bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-2xl">
+                <AvatarFrame
+                  avatar={user.avatar}
+                  name={user.name}
+                  points={user.careerPoints || 0}
+                  size="sm"
+                  showBadge
+                />
                 <div>
-                  <p className="text-[11px] text-slate-400 uppercase font-mono tracking-wider">Current Tier</p>
-                  <div className="mt-1">
-                    <TierBadge tier={user.rankTier || 'Bronze'} size="sm" />
-                  </div>
-                </div>
-                <div className="h-8 w-px bg-slate-800 mx-1" />
-                <div>
-                  <p className="text-[11px] text-slate-400 uppercase font-mono tracking-wider">Career Points</p>
-                  <p className="text-lg font-black text-amber-400 font-mono">{user.careerPoints || 0} pts</p>
+                  <p className="text-xs font-bold text-slate-800 leading-tight">{user.alias || user.name}</p>
+                  <p className="text-[11px] font-black text-sky-600 font-mono">{user.careerPoints || 0} pts</p>
                 </div>
               </div>
             ) : (
               <button
                 onClick={onOpenAuth}
-                className="inline-flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl font-semibold text-sm shadow-xl shadow-blue-600/25 transition cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white rounded-2xl font-bold text-xs shadow-md shadow-sky-500/25 transition-all hover:scale-105 active:scale-95 cursor-pointer"
               >
-                Sign In to Save Progress <ChevronRight size={18} />
+                Sign In to Save Progress <ChevronRight size={15} />
               </button>
             )}
           </div>
         </div>
       </div>
 
-      {/* College Engineering Branch Curriculum Pills */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-2.5">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-            <School size={15} /> College Engineering Branch Curriculum:
-          </span>
-          <span className="text-[11px] text-slate-400 hidden sm:inline">
-            Selected: <span className="text-white font-semibold">{selectedBranch}</span>
-          </span>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {branches.map(b => (
-            <button
-              key={b}
-              onClick={() => setSelectedBranch(b)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
-                selectedBranch === b
-                  ? 'bg-amber-400 text-slate-950 font-bold shadow-md shadow-amber-400/20'
-                  : 'bg-slate-950/80 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-800'
-              }`}
-            >
-              {b}
-            </button>
-          ))}
-        </div>
-      </div>
 
       {/* Filter & Search Bar */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
+      <div className="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
         {/* Search */}
         <div className="relative flex-1 max-w-md">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             placeholder="Search problems, topics, or exam years..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 pl-10 pr-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 transition"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 pl-10 pr-4 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition"
           />
         </div>
 
@@ -261,10 +243,10 @@ export default function ProblemLadder({ onSelectProblem, user, onOpenAuth, onQui
             <button
               key={t}
               onClick={() => setSelectedTopic(t)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap ${
                 selectedTopic === t
-                  ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
-                  : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+                  : 'bg-slate-50 text-slate-600 hover:bg-sky-50 hover:text-sky-700 border border-slate-200'
               }`}
             >
               {t}
@@ -273,90 +255,78 @@ export default function ProblemLadder({ onSelectProblem, user, onOpenAuth, onQui
         </div>
 
         {/* Difficulty Select */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400 font-medium hidden sm:inline">Difficulty:</span>
-          <select
-            value={selectedDifficulty}
-            onChange={(e) => setSelectedDifficulty(e.target.value)}
-            className="bg-slate-950 border border-slate-800 text-slate-300 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-amber-400"
-          >
-            {difficulties.map(d => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
-        </div>
+        <select
+          value={selectedDifficulty}
+          onChange={(e) => setSelectedDifficulty(e.target.value)}
+          className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium rounded-xl px-3 py-2 focus:outline-none focus:border-sky-500 cursor-pointer"
+        >
+          {difficulties.map(d => (
+            <option key={d} value={d}>{d === 'All' ? 'All Difficulties' : d}</option>
+          ))}
+        </select>
       </div>
 
-      {/* Problem Ladder Cards */}
+      {/* Problem Ladder Listing */}
       {loading ? (
-        <div className="py-20 text-center space-y-3">
-          <div className="w-10 h-10 border-3 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-slate-400 text-sm">Loading syllabus problem ladder...</p>
+        <div className="py-20 text-center text-slate-400">
+          <div className="w-9 h-9 border-3 border-sky-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-xs font-medium text-slate-500">Loading curriculum problems...</p>
         </div>
       ) : filteredProblems.length === 0 ? (
-        <div className="bg-slate-900/40 border border-slate-800 rounded-3xl p-12 text-center max-w-md mx-auto">
-          <Layers size={40} className="text-slate-600 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-white mb-1">No Problems Found</h3>
-          <p className="text-sm text-slate-400 mb-4">Try clearing your search query or topic filter.</p>
+        <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center max-w-md mx-auto shadow-sm">
+          <Layers size={36} className="text-slate-400 mx-auto mb-3" />
+          <h3 className="text-base font-bold text-slate-800 mb-1">No Problems Match Criteria</h3>
+          <p className="text-xs text-slate-500 mb-4">Try selecting another topic filter or clearing your search keywords.</p>
           <button
             onClick={() => { setSelectedTopic('All'); setSelectedDifficulty('All'); setSearchQuery(''); }}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-xl transition"
+            className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-500 transition cursor-pointer"
           >
             Reset Filters
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3.5">
+        <div className="space-y-3">
           {filteredProblems.map((prob) => {
-            const diffClass = getDifficultyColor(prob.difficulty);
+            const isSolved = prob.isSolved;
             return (
               <div
                 key={prob._id}
-                onClick={() => onSelectProblem(prob._id)}
-                className={`group relative flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-2xl border transition-all duration-200 cursor-pointer ${
-                  prob.isSolved
-                    ? 'bg-slate-900/40 border-emerald-950/60 hover:border-emerald-700/50 hover:bg-slate-900/80'
-                    : 'bg-slate-900/80 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900'
+                className={`bg-white border border-slate-200/90 hover:border-sky-400 hover:shadow-lg hover:-translate-y-0.5 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between transition-all duration-300 group ${
+                  isSolved ? 'bg-emerald-50/20' : ''
                 }`}
               >
-                {/* Left Side: Status & Details */}
-                <div className="flex items-start sm:items-center gap-4">
-                  {/* Status Checkbox */}
-                  <div className="mt-1 sm:mt-0 shrink-0">
-                    {prob.isSolved ? (
-                      <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                        <CheckCircle2 size={20} />
-                      </div>
+                {/* Left Side: Solved Icon + Info */}
+                <div className="flex items-start sm:items-center gap-3.5">
+                  <div className="mt-1 sm:mt-0">
+                    {isSolved ? (
+                      <CheckCircle2 size={20} className="text-emerald-500 shrink-0" />
                     ) : (
-                      <div className="w-8 h-8 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center text-slate-500 group-hover:text-amber-400 group-hover:border-amber-400/40 transition">
-                        <Circle size={18} />
-                      </div>
+                      <Circle size={20} className="text-slate-300 shrink-0" />
                     )}
                   </div>
 
-                  {/* Title & Metadata */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-base font-bold text-white group-hover:text-amber-400 transition">
+                      <h3 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-blue-600 transition">
                         {prob.title}
                       </h3>
 
-                      {/* LeetCode Graduation Badge */}
+                      {/* Core Basics Mastery Tag */}
                       {prob.isGraduationProblem && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 border border-amber-500/30">
-                          <Award size={12} className="text-amber-400" />
-                          Graduation Problem
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200">
+                          <Award size={11} className="text-sky-500" />
+                          ⭐ Solid Basics Mastery
                         </span>
                       )}
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-                      <span className="font-medium text-slate-300 bg-slate-950 px-2.5 py-0.5 rounded-lg border border-slate-800">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                      <span className="font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 text-[11px]">
                         {prob.topic}
                       </span>
 
                       {prob.collegeExamReference && (
-                        <span className="text-slate-400 bg-blue-950/40 text-blue-300/90 px-2 py-0.5 rounded-lg border border-blue-900/30 font-medium">
+                        <span className="text-slate-600 bg-sky-50/80 px-2 py-0.5 rounded-md border border-sky-100 text-[11px]">
                           🎓 {prob.collegeExamReference}
                         </span>
                       )}
@@ -365,38 +335,31 @@ export default function ProblemLadder({ onSelectProblem, user, onOpenAuth, onQui
                 </div>
 
                 {/* Right Side: Difficulty, Points & Action */}
-                <div className="mt-4 sm:mt-0 flex items-center justify-between sm:justify-end gap-2.5 shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-800">
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs px-2.5 py-1 rounded-lg border font-semibold ${diffClass}`}>
-                      {prob.difficulty}
-                    </span>
-                    <span className="text-xs font-mono font-bold text-amber-400 bg-amber-400/10 border border-amber-400/20 px-2.5 py-1 rounded-lg">
-                      +{prob.points} pts
-                    </span>
-                  </div>
+                <div className="mt-3 sm:mt-0 flex items-center justify-between sm:justify-end gap-2.5 shrink-0 pt-2.5 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                  <span className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border font-mono ${getDifficultyColor(prob.difficulty)}`}>
+                    {prob.difficulty}
+                  </span>
+
+                  <span className="text-xs font-mono font-bold text-slate-700 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
+                    +{prob.points} pts
+                  </span>
 
                   {user?.role === 'admin' && (
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEditProblem(prob);
-                      }}
-                      className="inline-flex items-center gap-1 px-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-xl text-xs font-bold transition cursor-pointer"
-                      title="Host Action: Edit this question in Admin Portal"
+                      onClick={() => onEditProblem(prob)}
+                      className="px-2.5 py-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition cursor-pointer flex items-center gap-1"
+                      title="Edit this question"
                     >
-                      <Edit3 size={13} />
-                      <span>Edit Question</span>
+                      <Edit3 size={12} />
+                      <span className="hidden sm:inline">Edit</span>
                     </button>
                   )}
 
                   <button
-                    className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition ${
-                      prob.isSolved
-                        ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                        : 'bg-blue-600 text-white hover:bg-blue-500 shadow-md shadow-blue-600/20'
-                    }`}
+                    onClick={() => onSelectProblem(prob._id)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white rounded-xl text-xs font-bold shadow-sm shadow-sky-500/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
                   >
-                    <span>{prob.isSolved ? 'Re-Practice' : 'Solve'}</span>
+                    <span>{isSolved ? 'Solve Again' : 'Solve Problem'}</span>
                     <ChevronRight size={14} />
                   </button>
                 </div>

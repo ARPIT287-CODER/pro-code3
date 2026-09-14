@@ -1,54 +1,55 @@
-﻿import React from 'react';
+import React from 'react';
 import { Award, Shield, Zap, Flame, Crown } from 'lucide-react';
 
 export const TIERS = {
   Bronze: {
     name: 'Bronze',
     min: 0,
-    max: 79,
+    max: 99,
     color: 'text-amber-600 border-amber-600/40 bg-amber-950/20',
     glow: 'from-amber-600/20 to-transparent',
     icon: Shield
   },
+  'Silver Knight': {
+    name: 'Silver Knight',
+    min: 100,
+    max: 249,
+    color: 'text-slate-700 border-slate-300 bg-slate-100',
+    glow: 'from-slate-400/20 to-transparent',
+    icon: Shield
+  },
+  'Gold Coder': {
+    name: 'Gold Coder',
+    min: 250,
+    max: 700,
+    color: 'text-amber-600 border-amber-400 bg-amber-50',
+    glow: 'from-amber-400/20 to-transparent',
+    icon: Award
+  },
+  'Cosmic Grandmaster': {
+    name: 'Cosmic Grandmaster',
+    min: 701,
+    max: Infinity,
+    color: 'text-purple-700 border-purple-300 bg-purple-50',
+    glow: 'from-purple-500/30 to-transparent',
+    icon: Crown
+  },
+  // Backward compatibility aliases
   Silver: {
-    name: 'Silver',
-    min: 80,
-    max: 299,
-    color: 'text-slate-300 border-slate-400/40 bg-slate-800/40',
+    name: 'Silver Knight',
+    min: 100,
+    max: 249,
+    color: 'text-slate-700 border-slate-300 bg-slate-100',
     glow: 'from-slate-400/20 to-transparent',
     icon: Shield
   },
   Gold: {
-    name: 'Gold',
-    min: 300,
-    max: 699,
-    color: 'text-amber-400 border-amber-400/50 bg-amber-950/30',
+    name: 'Gold Coder',
+    min: 250,
+    max: 700,
+    color: 'text-amber-600 border-amber-400 bg-amber-50',
     glow: 'from-amber-400/20 to-transparent',
     icon: Award
-  },
-  Platinum: {
-    name: 'Platinum',
-    min: 700,
-    max: 1499,
-    color: 'text-cyan-400 border-cyan-400/50 bg-cyan-950/30',
-    glow: 'from-cyan-400/20 to-transparent',
-    icon: Zap
-  },
-  Diamond: {
-    name: 'Diamond',
-    min: 1500,
-    max: 2999,
-    color: 'text-blue-400 border-blue-400/50 bg-blue-950/30',
-    glow: 'from-blue-400/20 to-transparent',
-    icon: Flame
-  },
-  Conqueror: {
-    name: 'Conqueror',
-    min: 3000,
-    max: Infinity,
-    color: 'text-rose-400 border-rose-400/60 bg-rose-950/40',
-    glow: 'from-rose-500/30 to-transparent',
-    icon: Crown
   }
 };
 

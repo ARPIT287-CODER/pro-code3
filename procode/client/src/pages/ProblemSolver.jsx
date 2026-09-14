@@ -1,7 +1,8 @@
-﻿import React, { useState, useEffect } from 'react';
-import { Terminal, Play, Send, RotateCcw, CheckCircle2, XCircle, Clock, Cpu, ExternalLink, ArrowLeft, Award, Sparkles, BookOpen, AlertCircle, Copy, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Terminal, Play, Send, RotateCcw, CheckCircle2, XCircle, Clock, Cpu, ExternalLink, ArrowLeft, Award, Sparkles, Copy, Check, MessageSquare, Trash2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import TierBadge from '../components/TierBadge';
+import AvatarFrame from '../components/AvatarFrame';
 
 export default function ProblemSolver({ problemId, onBack, user, onOpenAuth, onPointsUpdated }) {
   const [problem, setProblem] = useState(null);
@@ -9,7 +10,7 @@ export default function ProblemSolver({ problemId, onBack, user, onOpenAuth, onP
   const [language, setLanguage] = useState('cpp');
   const [code, setCode] = useState('');
   const [customInput, setCustomInput] = useState('');
-  const [activeLeftTab, setActiveLeftTab] = useState('description'); // 'description', 'leetcode', 'submissions'
+  const [activeLeftTab, setActiveLeftTab] = useState('description'); // 'description', 'leetcode', 'discussion'
   const [activeRightTab, setActiveRightTab] = useState('testcases'); // 'testcases', 'results'
   const [selectedTestCaseIdx, setSelectedTestCaseIdx] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
@@ -18,11 +19,95 @@ export default function ProblemSolver({ problemId, onBack, user, onOpenAuth, onP
   const [submissionFeedback, setSubmissionFeedback] = useState(null);
   const [copiedCode, setCopiedCode] = useState(false);
 
-  useEffect(() => {
-    fetchProblemDetails();
-  }, [problemId]);
+  // Discussion comments state
+  const [comments, setComments] = useState([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [submittingComment, setSubmittingComment] = useState(false);
 
-  const fetchProblemDetails = async () => {
+  async function fetchComments() {
+    try {
+      setLoadingComments(true);
+      const res = await fetch(`/api/problems/${problemId}/comments`);
+      if (res.ok) {
+        const data = await res.json();
+        setComments(data.comments || []);
+      }
+    } catch (err) {
+      console.error('Failed to load comments:', err);
+    } finally {
+      setLoadingComments(false);
+    }
+  }
+
+  const handlePostComment = async (e) => {
+    e.preventDefault();
+    if (!commentText.trim()) return;
+    if (!user) {
+      onOpenAuth('signin');
+      return;
+    }
+
+    try {
+      setSubmittingComment(true);
+      const token = localStorage.getItem('procode_token');
+      const res = await fetch(`/api/problems/${problemId}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          content: commentText.trim(),
+          text: commentText.trim(),
+          userName: user?.name,
+          userAvatar: user?.avatar,
+          userPoints: user?.careerPoints,
+          userRankTier: user?.rankTier,
+          userBatch: user?.batch
+        })
+      });
+      if (res.ok) {
+        setCommentText('');
+        fetchComments();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to post comment');
+      }
+    } catch (err) {
+      console.error('Failed to post comment:', err);
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (!window.confirm('Delete this comment?')) return;
+    try {
+      const token = localStorage.getItem('procode_token');
+      const res = await fetch(`/api/problems/${problemId}/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setComments(comments.filter(c => c.id !== commentId));
+      }
+    } catch (err) {
+      console.error('Failed to delete comment:', err);
+    }
+  };
+
+  function getDefaultStarter(lang) {
+    switch (lang) {
+      case 'c': return '#include <stdio.h>\n\nint main() {\n    // Write your solution here\n    return 0;\n}';
+      case 'cpp': return '#include <iostream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    // Write your solution here\n    return 0;\n}';
+      case 'java': return 'import java.util.Scanner;\n\npublic class Solution {\n    public static void main(String[] args) {\n        // Write your solution here\n    }\n}';
+      case 'python': return 'import sys\n\ndef main():\n    # Write your solution here\n    pass\n\nif __name__ == "__main__":\n    main()';
+      default: return '';
+    }
+  }
+
+  async function fetchProblemDetails() {
     try {
       setLoading(true);
       const token = localStorage.getItem('procode_token');
@@ -31,40 +116,29 @@ export default function ProblemSolver({ problemId, onBack, user, onOpenAuth, onP
       const data = await res.json();
       if (data.problem) {
         setProblem(data.problem);
-        // Set starter code for default language
-        const starter = data.problem.starterCode?.[language] || getDefaultStarter(language);
-        setCode(starter);
+        // Only load starter boilerplate template (not pre-filled solution answers)
+        setCode(getDefaultStarter(language));
       }
     } catch (err) {
       console.error('Failed to fetch problem:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    fetchProblemDetails();
+    fetchComments();
+  }, [problemId]);
 
   const handleLanguageChange = (newLang) => {
     setLanguage(newLang);
-    if (problem && problem.starterCode && problem.starterCode[newLang]) {
-      setCode(problem.starterCode[newLang]);
-    } else {
-      setCode(getDefaultStarter(newLang));
-    }
-  };
-
-  const getDefaultStarter = (lang) => {
-    switch (lang) {
-      case 'c': return '#include <stdio.h>\n\nint main() {\n    // Write your solution here\n    return 0;\n}';
-      case 'cpp': return '#include <iostream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    // Write your solution here\n    return 0;\n}';
-      case 'java': return 'import java.util.Scanner;\n\npublic class Solution {\n    public static void main(String[] args) {\n        // Write your solution here\n    }\n}';
-      case 'python': return 'import sys\n\ndef main():\n    # Write your solution here\n    pass\n\nif __name__ == "__main__":\n    main()';
-      default: return '';
-    }
+    setCode(getDefaultStarter(newLang));
   };
 
   const handleResetCode = () => {
     if (window.confirm('Reset code to initial boilerplate template?')) {
-      const starter = problem?.starterCode?.[language] || getDefaultStarter(language);
-      setCode(starter);
+      setCode(getDefaultStarter(language));
     }
   };
 
@@ -172,42 +246,42 @@ export default function ProblemSolver({ problemId, onBack, user, onOpenAuth, onP
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-4 space-y-4">
+    <div className="w-full px-2 sm:px-4 lg:px-6 py-4 space-y-4">
       {/* Top Action Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/80 border border-slate-800 p-3 sm:px-5 rounded-2xl">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-slate-200 p-3 sm:px-5 rounded-2xl shadow-xs">
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            className="p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
           >
             <ArrowLeft size={18} />
           </button>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-white tracking-tight">{problem.title}</h2>
+              <h2 className="text-lg font-bold text-slate-900 tracking-tight">{problem.title}</h2>
               {problem.isSolved && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-750 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
                   <CheckCircle2 size={12} /> Solved
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-400">
-              {problem.topic} &bull; <span className="text-amber-400 font-semibold">{problem.difficulty}</span> &bull; {problem.points} Points
+            <p className="text-xs text-slate-500">
+              {problem.topic} &bull; <span className="text-blue-600 font-semibold">{problem.difficulty}</span> &bull; {problem.points} Points
             </p>
           </div>
         </div>
 
         {/* Language selector & code actions */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-1">
+          <div className="flex items-center bg-slate-100 border border-slate-200 rounded-xl p-1">
             {['c', 'cpp', 'java', 'python'].map((lang) => (
               <button
                 key={lang}
                 onClick={() => handleLanguageChange(lang)}
                 className={`px-3 py-1 text-xs font-mono font-semibold rounded-lg uppercase transition cursor-pointer ${
                   language === lang
-                    ? 'bg-slate-800 text-amber-400 shadow-sm border border-slate-700'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 {lang === 'cpp' ? 'C++' : lang}
@@ -218,76 +292,87 @@ export default function ProblemSolver({ problemId, onBack, user, onOpenAuth, onP
           <button
             onClick={handleCopyCode}
             title="Copy Code"
-            className="p-2 text-slate-400 hover:text-white bg-slate-950 border border-slate-800 rounded-xl transition cursor-pointer"
+            className="p-2 text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition cursor-pointer"
           >
-            {copiedCode ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
+            {copiedCode ? <Check size={16} className="text-emerald-600" /> : <Copy size={16} />}
           </button>
 
           <button
             onClick={handleResetCode}
             title="Reset to Starter Template"
-            className="p-2 text-slate-400 hover:text-white bg-slate-950 border border-slate-800 rounded-xl transition cursor-pointer"
+            className="p-2 text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition cursor-pointer"
           >
             <RotateCcw size={16} />
           </button>
         </div>
       </div>
 
-      {/* Main Workspace (Split Grid on Desktop, Stacked on Mobile per Roadmap 8) */}
+      {/* Main Workspace */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Left Column: Problem Details & LeetCode Bridge (Desktop: 5 cols, Mobile: full) */}
-        <div className="lg:col-span-5 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden min-h-[500px] max-h-[750px]">
+        {/* Left Column: Problem Details & Extended Basics Practice */}
+        <div className="lg:col-span-5 flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden min-h-[550px] max-h-[820px] shadow-xs">
           {/* Left Tabs */}
-          <div className="flex border-b border-slate-800 bg-slate-950/60 p-1.5 gap-1">
+          <div className="flex border-b border-slate-200 bg-slate-50 p-1.5 gap-1">
             <button
               onClick={() => setActiveLeftTab('description')}
               className={`flex-1 py-2 px-3 text-xs font-semibold rounded-xl transition cursor-pointer ${
                 activeLeftTab === 'description'
-                  ? 'bg-slate-800 text-amber-400 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-white text-blue-600 shadow-xs border border-slate-200'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Description &amp; Syllabus
             </button>
             <button
               onClick={() => setActiveLeftTab('leetcode')}
-              className={`flex-1 py-2 px-3 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition cursor-pointer ${
+              className={`flex-1 py-2 px-2.5 text-xs font-semibold rounded-xl flex items-center justify-center gap-1 transition cursor-pointer ${
                 activeLeftTab === 'leetcode'
-                  ? 'bg-slate-800 text-amber-400 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-white text-blue-600 shadow-xs border border-slate-200'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <ExternalLink size={13} />
-              LeetCode Bridge
+              <Sparkles size={13} className="text-sky-500" />
+              Basics &amp; Extended
+            </button>
+            <button
+              onClick={() => setActiveLeftTab('discussion')}
+              className={`flex-1 py-2 px-2.5 text-xs font-semibold rounded-xl flex items-center justify-center gap-1 transition cursor-pointer ${
+                activeLeftTab === 'discussion'
+                  ? 'bg-white text-blue-600 shadow-xs border border-slate-200'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <MessageSquare size={13} className="text-blue-500" />
+              <span>Discussion ({comments.length})</span>
             </button>
           </div>
 
           {/* Left Content Area */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-5 text-slate-300 text-sm">
+          <div className="flex-1 overflow-y-auto p-5 space-y-5 text-slate-700 text-sm">
             {activeLeftTab === 'description' ? (
               <>
                 {/* College Exam Citation Tag */}
                 {problem.collegeExamReference && (
-                  <div className="p-3.5 bg-blue-950/40 border border-blue-900/40 rounded-xl text-xs space-y-1">
-                    <p className="font-bold text-blue-300 flex items-center gap-1.5">
-                      🎓 College Exam Mapping
+                  <div className="p-3.5 bg-sky-50 border border-sky-200 rounded-xl text-xs space-y-1">
+                    <p className="font-bold text-sky-900 flex items-center gap-1.5">
+                      🎓 College Exam &amp; Viva Alignment
                     </p>
-                    <p className="text-slate-300">{problem.collegeExamReference}</p>
-                    <p className="text-[11px] text-blue-400/80 font-mono">{problem.examUnit}</p>
+                    <p className="text-slate-700">{problem.collegeExamReference}</p>
+                    <p className="text-[11px] text-blue-700 font-mono font-medium">{problem.examUnit}</p>
                   </div>
                 )}
 
                 {/* Problem Statement */}
                 <div>
                   <h4 className="text-xs font-semibold uppercase font-mono tracking-wider text-slate-400 mb-2">Problem Statement</h4>
-                  <p className="leading-relaxed whitespace-pre-line text-slate-200">{problem.description}</p>
+                  <p className="leading-relaxed whitespace-pre-line text-slate-800">{problem.description}</p>
                 </div>
 
                 {/* Constraints */}
                 {problem.constraints && (
                   <div>
                     <h4 className="text-xs font-semibold uppercase font-mono tracking-wider text-slate-400 mb-2">Constraints</h4>
-                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 font-mono text-xs text-amber-300/90 whitespace-pre-line">
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 font-mono text-xs text-blue-800 whitespace-pre-line">
                       {problem.constraints}
                     </div>
                   </div>
@@ -299,13 +384,13 @@ export default function ProblemSolver({ problemId, onBack, user, onOpenAuth, onP
                     {problem.inputFormat && (
                       <div>
                         <h4 className="text-xs font-semibold uppercase font-mono tracking-wider text-slate-400 mb-1">Input Format</h4>
-                        <p className="text-xs text-slate-300 whitespace-pre-line">{problem.inputFormat}</p>
+                        <p className="text-xs text-slate-600 whitespace-pre-line">{problem.inputFormat}</p>
                       </div>
                     )}
                     {problem.outputFormat && (
                       <div>
                         <h4 className="text-xs font-semibold uppercase font-mono tracking-wider text-slate-400 mb-1">Output Format</h4>
-                        <p className="text-xs text-slate-300 whitespace-pre-line">{problem.outputFormat}</p>
+                        <p className="text-xs text-slate-600 whitespace-pre-line">{problem.outputFormat}</p>
                       </div>
                     )}
                   </div>
@@ -316,21 +401,21 @@ export default function ProblemSolver({ problemId, onBack, user, onOpenAuth, onP
                   <h4 className="text-xs font-semibold uppercase font-mono tracking-wider text-slate-400 mb-2">Sample Test Cases</h4>
                   <div className="space-y-3">
                     {(problem.sampleTestCases || []).map((stc, idx) => (
-                      <div key={idx} className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2 text-xs font-mono">
-                        <div className="flex justify-between items-center text-slate-400 text-[11px]">
-                          <span>Sample Case {idx + 1}</span>
+                      <div key={idx} className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2 text-xs font-mono">
+                        <div className="flex justify-between items-center text-slate-500 text-[11px]">
+                          <span className="font-semibold">Sample Case {idx + 1}</span>
                         </div>
                         <div>
-                          <span className="text-slate-500 block mb-0.5">Input:</span>
-                          <pre className="text-slate-200 bg-slate-900 p-2 rounded-lg">{stc.input}</pre>
+                          <span className="text-slate-400 block mb-0.5">Input:</span>
+                          <pre className="text-slate-800 bg-white border border-slate-200 p-2 rounded-lg">{stc.input}</pre>
                         </div>
                         <div>
-                          <span className="text-slate-500 block mb-0.5">Expected Output:</span>
-                          <pre className="text-amber-400 bg-slate-900 p-2 rounded-lg">{stc.expectedOutput}</pre>
+                          <span className="text-slate-400 block mb-0.5">Expected Output:</span>
+                          <pre className="text-blue-700 font-bold bg-white border border-slate-200 p-2 rounded-lg">{stc.expectedOutput}</pre>
                         </div>
                         {stc.explanation && (
-                          <div className="text-[11px] text-slate-400 font-sans mt-1">
-                            <span className="font-semibold text-slate-300">Explanation:</span> {stc.explanation}
+                          <div className="text-[11px] text-slate-600 font-sans mt-1">
+                            <span className="font-semibold text-slate-700">Explanation:</span> {stc.explanation}
                           </div>
                         )}
                       </div>
@@ -338,25 +423,25 @@ export default function ProblemSolver({ problemId, onBack, user, onOpenAuth, onP
                   </div>
                 </div>
               </>
-            ) : (
-              /* LeetCode Bridge Tab */
+            ) : activeLeftTab === 'leetcode' ? (
+              /* Extended Practice & Basics Mastery Tab */
               <div className="space-y-6">
-                <div className="p-4 bg-gradient-to-br from-indigo-950/60 to-purple-950/40 border border-indigo-900/50 rounded-2xl space-y-3">
-                  <div className="flex items-center gap-2 text-amber-400 font-bold">
+                <div className="p-4 bg-sky-50 border border-sky-200 rounded-2xl space-y-3">
+                  <div className="flex items-center gap-2 text-blue-700 font-bold">
                     <Award size={18} />
-                    <span>College-to-Placement Bridge</span>
+                    <span>This Site Will Make Your Basics Good</span>
                   </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    Once you master this university syllabus problem, test yourself against the exact industry standard on LeetCode!
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Mastering this core syllabus problem strengthens your fundamentals for exams, viva, and technical problem-solving!
                   </p>
                   {problem.leetcodeUrl && (
                     <a
                       href={problem.leetcodeUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20 transition"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition"
                     >
-                      <span>Open Equivalent on LeetCode</span>
+                      <span>Practice Extended Problem</span>
                       <ExternalLink size={14} />
                     </a>
                   )}
@@ -365,7 +450,7 @@ export default function ProblemSolver({ problemId, onBack, user, onOpenAuth, onP
                 {/* Suggested Follow-Ups */}
                 <div>
                   <h4 className="text-xs font-semibold uppercase font-mono tracking-wider text-slate-400 mb-3">
-                    Recommended LeetCode Follow-Ups (Easy &rarr; Medium)
+                    Recommended Basics &amp; Follow-Up Practice (Easy &rarr; Medium)
                   </h4>
                   <div className="space-y-2.5">
                     {(problem.suggestedLeetcode || []).map((item, idx) => (
@@ -374,30 +459,147 @@ export default function ProblemSolver({ problemId, onBack, user, onOpenAuth, onP
                         href={item.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-between p-3.5 bg-slate-950 hover:bg-slate-800/80 border border-slate-800 rounded-xl text-xs transition group"
+                        className="flex items-center justify-between p-3.5 bg-slate-50 hover:bg-sky-50 border border-slate-200 hover:border-sky-300 rounded-xl text-xs transition group"
                       >
                         <div className="flex items-center gap-2.5">
-                          <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-mono text-[10px]">
+                          <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-mono text-[10px]">
                             {idx + 1}
                           </span>
-                          <span className="font-medium text-slate-200 group-hover:text-amber-400 transition">
+                          <span className="font-medium text-slate-800 group-hover:text-blue-600 transition">
                             {item.title}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                            item.difficulty === 'Easy' ? 'text-emerald-400 bg-emerald-500/10' : 'text-amber-400 bg-amber-500/10'
+                            item.difficulty === 'Easy' ? 'text-emerald-750 bg-emerald-50 border border-emerald-200' : 'text-amber-700 bg-amber-50 border border-amber-200'
                           }`}>
                             {item.difficulty}
                           </span>
-                          <ExternalLink size={13} className="text-slate-500 group-hover:text-amber-400" />
+                          <ExternalLink size={13} className="text-slate-400 group-hover:text-blue-600" />
                         </div>
                       </a>
                     ))}
                   </div>
                 </div>
               </div>
-            )}
+            ) : activeLeftTab === 'discussion' ? (
+              /* Discussion / Comments Tab */
+              <div className="space-y-4 flex flex-col h-full">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <div className="flex items-center gap-2 text-slate-800 font-bold text-xs">
+                    <MessageSquare size={15} className="text-blue-600" />
+                    <span>Problem Discussion &amp; Doubts ({comments.length})</span>
+                  </div>
+                  <span className="text-[11px] text-slate-400">Ask hints, clarify logic, share approaches</span>
+                </div>
+
+                {/* Comment Input Box */}
+                <form onSubmit={handlePostComment} className="space-y-2">
+                  <div className="flex items-start gap-2.5">
+                    {user ? (
+                      <AvatarFrame
+                        avatar={user.avatar}
+                        name={user.name}
+                        points={user.careerPoints || 0}
+                        size="xs"
+                      />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
+                        ?
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <textarea
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        placeholder={user ? "Ask a doubt, give a hint, or discuss edge cases..." : "Please sign in to join the discussion..."}
+                        disabled={!user}
+                        rows={2}
+                        className="w-full px-3 py-2 text-xs bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 focus:border-blue-500 rounded-xl resize-none focus:outline-none transition leading-relaxed disabled:opacity-60"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    {user ? (
+                      <button
+                        type="submit"
+                        disabled={submittingComment || !commentText.trim()}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
+                      >
+                        <Send size={12} className={submittingComment ? 'animate-pulse' : ''} />
+                        <span>{submittingComment ? 'Posting...' : 'Post Comment'}</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onOpenAuth('signin')}
+                        className="text-xs text-blue-600 font-bold hover:underline cursor-pointer"
+                      >
+                        Sign in to Comment &rarr;
+                      </button>
+                    )}
+                  </div>
+                </form>
+
+                {/* Comments List */}
+                <div className="flex-1 space-y-3 pt-2">
+                  {loadingComments ? (
+                    <div className="py-8 text-center text-xs text-slate-400 flex flex-col items-center gap-2">
+                      <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                      <span>Loading discussion comments...</span>
+                    </div>
+                  ) : comments.length === 0 ? (
+                    <div className="py-8 text-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-500 space-y-1">
+                      <MessageSquare size={24} className="mx-auto text-slate-400 opacity-60" />
+                      <p className="font-semibold text-slate-700">No discussions yet</p>
+                      <p className="text-[11px] text-slate-400">Be the first student or host to ask a question or leave a hint!</p>
+                    </div>
+                  ) : (
+                    comments.map((c) => {
+                      const canDelete = user && (user.id === c.userId || user.role === 'admin');
+                      return (
+                        <div key={c.id} className="p-3 bg-slate-50 hover:bg-sky-50/30 border border-slate-200/90 rounded-xl space-y-1.5 transition text-xs">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <AvatarFrame
+                                avatar={c.userAvatar}
+                                name={c.userName}
+                                points={c.userPoints || 0}
+                                size="xs"
+                              />
+                              <div>
+                                <span className="font-bold text-slate-800">{c.userName}</span>
+                                {c.userRole === 'admin' && (
+                                  <span className="ml-1.5 text-[9px] font-bold px-1.5 py-0.2 bg-purple-100 text-purple-700 border border-purple-200 rounded">
+                                    Host
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                              <span>{new Date(c.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                              {canDelete && (
+                                <button
+                                  onClick={() => handleDeleteComment(c.id)}
+                                  title="Delete comment"
+                                  className="text-slate-400 hover:text-rose-500 transition cursor-pointer p-0.5"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <p className="text-slate-700 pl-9 whitespace-pre-wrap leading-relaxed">
+                            {c.content || c.text}
+                          </p>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -599,15 +801,15 @@ export default function ProblemSolver({ problemId, onBack, user, onOpenAuth, onP
 
       {/* Success Celebration Modal when Solved */}
       {submissionFeedback && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
-          <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-center space-y-5">
-            <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center justify-center mx-auto text-amber-400">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-xs animate-in fade-in">
+          <div className="max-w-md w-full bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-2xl text-center space-y-5">
+            <div className="w-16 h-16 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-center mx-auto text-blue-600 shadow-xs">
               <Sparkles size={32} />
             </div>
 
             <div>
-              <h3 className="text-2xl font-black text-white tracking-tight">Challenge Solved! 🎉</h3>
-              <p className="text-slate-400 text-sm mt-1">
+              <h3 className="text-2xl font-black text-slate-900 tracking-tight">Challenge Solved! 🎉</h3>
+              <p className="text-slate-600 text-sm mt-1">
                 {submissionFeedback.alreadySolved
                   ? "Great practice! You've already earned points for this problem."
                   : `Congratulations! You earned +${submissionFeedback.pointsAwarded} career points!`}
@@ -615,12 +817,12 @@ export default function ProblemSolver({ problemId, onBack, user, onOpenAuth, onP
             </div>
 
             {/* Points & Tier Card */}
-            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex items-center justify-around">
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex items-center justify-around">
               <div>
                 <p className="text-[11px] text-slate-500 uppercase font-mono">Total Points</p>
-                <p className="text-xl font-black text-amber-400 font-mono">{submissionFeedback.newCareerPoints} pts</p>
+                <p className="text-xl font-black text-blue-600 font-mono">{submissionFeedback.newCareerPoints} pts</p>
               </div>
-              <div className="h-8 w-px bg-slate-800" />
+              <div className="h-8 w-px bg-slate-200" />
               <div>
                 <p className="text-[11px] text-slate-500 uppercase font-mono">Rank Tier</p>
                 <div className="mt-1">
@@ -629,29 +831,29 @@ export default function ProblemSolver({ problemId, onBack, user, onOpenAuth, onP
               </div>
             </div>
 
-            {/* LeetCode Follow-up recommendation */}
+            {/* Basics & Extended Practice follow-up */}
             {submissionFeedback.leetcodeUrl && (
-              <div className="p-4 bg-indigo-950/40 border border-indigo-900/40 rounded-2xl text-left space-y-2">
-                <p className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
-                  🚀 Ready for the Next Step?
+              <div className="p-4 bg-sky-50 border border-sky-200 rounded-2xl text-left space-y-2">
+                <p className="text-xs font-bold text-sky-900 flex items-center gap-1.5">
+                  ⭐ Solid Basics Foundation
                 </p>
-                <p className="text-xs text-slate-300">
-                  Graduate from college-ready to placement-ready with the equivalent LeetCode challenge:
+                <p className="text-xs text-slate-600">
+                  This site will make your basics good. Continue strengthening your core programming foundations with this extended challenge:
                 </p>
                 <a
                   href={submissionFeedback.leetcodeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-xs font-bold text-amber-400 hover:text-amber-300"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700"
                 >
-                  Solve on LeetCode <ExternalLink size={12} />
+                  Practice Extended Challenge <ExternalLink size={12} />
                 </a>
               </div>
             )}
 
             <button
               onClick={() => setSubmissionFeedback(null)}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold text-sm transition cursor-pointer"
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm shadow-xs hover:shadow-md transition cursor-pointer"
             >
               Continue Practicing
             </button>
